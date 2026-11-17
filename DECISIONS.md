@@ -14,6 +14,8 @@ Source of truth for provider behaviour: https://pixelforge.promptedit.dev/docs (
 | PHP 8.4 CLI installed next to XAMPP's PHP 8.2                                          | The current starter kit needs PHP ≥ 8.3. The only kit that runs on 8.2 is the Feb 2025 tag. XAMPP is left untouched.                                                    |
 | MySQL locally (XAMPP MariaDB 10.4) and on Laravel Cloud                                | Row locks (`SELECT … FOR UPDATE`) behave the same in development and production. SQLite ignores `lockForUpdate`.                                                        |
 | Tests on in-memory SQLite                                                              | Fast and isolated. The unique constraints that protect money work the same on SQLite. Locking behaviour is exercised in live tests against MySQL.                       |
+| PHPUnit (not Pest)                                                                     | The starter kit ships PHPUnit 12 class-based tests. Using the same style everywhere beats mixing two frameworks.                                                        |
+| PHP 8.4 in CI and production                                                           | Composer resolved dependencies under 8.4, and the lock file requires PHP ≥ 8.4.1. CI and Laravel Cloud both run 8.4.                                                    |
 | cloudflared quick tunnel for local webhooks                                            | No account needed. Pixelforge rejects localhost or private webhook URLs, so a tunnel is required.                                                                       |
 | One Pixelforge API key per environment (local and deployed)                            | The webhook URL, signing secret and `/v1/usage` report are all **per key**. The deployed app's numbers can only match `/v1/usage` exactly if nothing else uses its key. |
 
@@ -134,7 +136,7 @@ There are four layers, each enough on its own for the case it covers:
     | Unexpected exception                                | **500**, the transaction rolls back including the event row, so Pixelforge's retries (10s … 15m) redeliver it |
 
 - **Webhook before the POST returns:** we send `metadata.pixelflow_generation_id`. When `pixelforge_id` isn't linked yet, the handler matches on that.
-- CSRF is excluded for this one route only. Pixelforge has no CSRF token.
+- **Outside the `web` middleware group:** the route is loaded from `routes/webhooks.php` with no session, cookies or CSRF. Pixelforge has no CSRF token, and a session row per webhook would be waste. The request is authenticated by its HMAC signature alone.
 
 ## 15. Retry policy for provider errors
 
@@ -178,3 +180,13 @@ There are four layers, each enough on its own for the case it covers:
 
 - **Decision:** a per-day and per-day×user table of generations, credit spend, provider cost and profit, all summed from `generation_costs` by `billed_on`. It is shown side by side with a live `GET /v1/usage` call, with an exact integer match on cost, token counts and generation count.
 - **Why:** it reconciles against Pixelforge's source of truth rather than just restating our own numbers. `pixelflow:audit-usage` prints the same comparison from the CLI.
+
+## 21. No account deletion
+
+- **Decision:** the starter kit's "Delete account" feature is removed. Foreign keys from `generations` to `users`, and from `generation_costs` to `generations`, use `restrictOnDelete`.
+- **Why:** cost records are financial history, and they must keep summing to `/v1/usage`. Deleting a user would either cascade-delete their charges and break reconciliation, or fail on the foreign key. Proper account deletion (anonymising the user while keeping the ledger) is out of scope for this assessment.
+
+## 22. Allowed sizes and qualities come from the price list
+
+- **Decision:** the Form Requests validate `size` and `quality` against the keys of `GET /v1/pricing`'s token tables, not against hardcoded lists. If pricing can't be loaded, the request fails with a readable "pricing temporarily unavailable" error instead of guessing.
+- **Why:** a generation we can't price is a generation we shouldn't submit. Using the provider's own table also means a size Pixelforge adds or removes is picked up automatically.
