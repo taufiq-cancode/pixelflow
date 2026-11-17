@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * The single billing record of a succeeded generation. Amounts are integer
@@ -21,9 +21,9 @@ use Illuminate\Support\Carbon;
  * @property int $user_cost_nano
  * @property int $markup_bps
  * @property bool $user_charged
- * @property Carbon $billed_on
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property CarbonImmutable $billed_on
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  * @property-read Generation $generation
  */
 #[Fillable([

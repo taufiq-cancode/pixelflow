@@ -3,13 +3,13 @@
 namespace App\Models;
 
 use App\Enums\GenerationStatus;
+use Carbon\CarbonImmutable;
 use Database\Factories\GenerationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -25,15 +25,15 @@ use Illuminate\Support\Carbon;
  * @property int $estimated_max_cost_nano
  * @property array<string, string>|null $provider_rates
  * @property string|null $image_url
- * @property Carbon|null $image_url_expires_at
+ * @property CarbonImmutable|null $image_url_expires_at
  * @property string|null $error_code
  * @property string|null $error_message
  * @property int $submit_attempts
- * @property Carbon|null $started_at
- * @property Carbon|null $completed_at
- * @property Carbon|null $last_synced_at
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property CarbonImmutable|null $started_at
+ * @property CarbonImmutable|null $completed_at
+ * @property CarbonImmutable|null $last_synced_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  * @property-read User $user
  * @property-read GenerationCost|null $cost
  */

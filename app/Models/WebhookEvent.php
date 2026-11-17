@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 
 /**
  * A received Pixelforge webhook event. The unique event_id is what makes
@@ -17,9 +17,9 @@ use Illuminate\Support\Carbon;
  * @property int|null $delivery_attempt
  * @property array<string, mixed> $payload
  * @property string|null $outcome
- * @property Carbon|null $processed_at
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property CarbonImmutable|null $processed_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  */
 class WebhookEvent extends Model
 {
