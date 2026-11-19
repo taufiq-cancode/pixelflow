@@ -90,10 +90,12 @@ class Generation extends Model
     /**
      * The body for POST /v1/generations.
      *
-     * It is built only from stored columns, so every retry sends exactly the
-     * same parameters with the same Idempotency-Key (Pixelforge answers 409
-     * if a key is reused with different parameters). The metadata lets a
-     * webhook that arrives before the POST response find this row.
+     * It is built only from stored columns and the environment name, so
+     * every retry sends exactly the same parameters with the same
+     * Idempotency-Key (Pixelforge answers 409 if a key is reused with
+     * different parameters). The metadata lets a webhook that arrives before
+     * the POST response find this row; the environment name stops another
+     * environment's webhooks from matching it if an API key is ever shared.
      *
      * @return array<string, mixed>
      */
@@ -103,7 +105,10 @@ class Generation extends Model
             'prompt' => $this->prompt,
             'size' => $this->size,
             'quality' => $this->quality,
-            'metadata' => ['pixelflow_generation_id' => (string) $this->id],
+            'metadata' => [
+                'pixelflow_generation_id' => (string) $this->id,
+                'pixelflow_env' => config()->string('app.env'),
+            ],
         ];
 
         if ($this->reference_images !== []) {

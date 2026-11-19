@@ -245,7 +245,7 @@ class PixelforgeWebhookTest extends TestCase
         // so the Pixelforge id isn't linked yet.
         $generation = Generation::factory()->create();
         $snapshot = Pixelforge::generation('gen_EARLY', 'processing', [
-            'metadata' => ['pixelflow_generation_id' => (string) $generation->id],
+            'metadata' => ['pixelflow_generation_id' => (string) $generation->id, 'pixelflow_env' => 'testing'],
         ]);
 
         $this->sendWebhook(Pixelforge::event('evt_early', 'generation.processing', $snapshot))
@@ -270,13 +270,31 @@ class PixelforgeWebhookTest extends TestCase
     {
         $generation = $this->processingGeneration();
         $snapshot = Pixelforge::generation('gen_IMPOSTOR', 'succeeded', [
-            'metadata' => ['pixelflow_generation_id' => (string) $generation->id],
+            'metadata' => ['pixelflow_generation_id' => (string) $generation->id, 'pixelflow_env' => 'testing'],
         ]);
 
         $this->sendWebhook(Pixelforge::event('evt_impostor', 'generation.succeeded', $snapshot))
             ->assertJson(['outcome' => 'unmatched']);
 
         $this->assertSame(GenerationStatus::Processing, $generation->fresh()?->status);
+        $this->assertDatabaseCount('generation_costs', 0);
+    }
+
+    public function test_an_event_from_another_environment_never_matches_our_generation()
+    {
+        // Same local id, but sent by another environment sharing the API key.
+        $generation = Generation::factory()->create();
+        $snapshot = Pixelforge::generation('gen_OTHER_ENV', 'succeeded', [
+            'metadata' => ['pixelflow_generation_id' => (string) $generation->id, 'pixelflow_env' => 'production'],
+        ]);
+
+        $this->sendWebhook(Pixelforge::event('evt_other_env', 'generation.succeeded', $snapshot))
+            ->assertOk()
+            ->assertJson(['outcome' => 'unmatched']);
+
+        $generation->refresh();
+        $this->assertNull($generation->pixelforge_id);
+        $this->assertSame(GenerationStatus::Queued, $generation->status);
         $this->assertDatabaseCount('generation_costs', 0);
     }
 
@@ -315,7 +333,7 @@ class PixelforgeWebhookTest extends TestCase
         app(FailUnsubmittedGeneration::class)->handle($generation->id, 'submission_failed', 'Could not reach Pixelforge.');
 
         $snapshot = Pixelforge::generation('gen_LATE', 'succeeded', [
-            'metadata' => ['pixelflow_generation_id' => (string) $generation->id],
+            'metadata' => ['pixelflow_generation_id' => (string) $generation->id, 'pixelflow_env' => 'testing'],
         ]);
 
         $this->sendWebhook(Pixelforge::event('evt_late', 'generation.succeeded', $snapshot))

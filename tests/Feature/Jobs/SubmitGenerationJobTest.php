@@ -47,7 +47,7 @@ class SubmitGenerationJobTest extends TestCase
             && $request['size'] === '1024x1024'
             && $request['quality'] === 'medium'
             && $request['reference_images'] === ['https://example.com/style.png']
-            && $request['metadata'] === ['pixelflow_generation_id' => (string) $generation->id]);
+            && $request['metadata'] === ['pixelflow_generation_id' => (string) $generation->id, 'pixelflow_env' => 'testing']);
 
         $generation->refresh();
         $this->assertSame('gen_NEW', $generation->pixelforge_id);

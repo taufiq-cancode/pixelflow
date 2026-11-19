@@ -136,6 +136,7 @@ There are four layers, each enough on its own for the case it covers:
     | Unexpected exception                                | **500**, the transaction rolls back including the event row, so Pixelforge's retries (10s … 15m) redeliver it |
 
 - **Webhook before the POST returns:** we send `metadata.pixelflow_generation_id`. When `pixelforge_id` isn't linked yet, the handler matches on that.
+- **Environment tag:** we also send `metadata.pixelflow_env` (`local`, `production`), and a metadata match requires it to equal our own environment. Local ids are plain integers, so without the tag, a misconfigured key shared by two environments could let local generation #12's webhook attach to production generation #12 and charge the wrong user. This was found while setting up the local and production keys.
 - **Outside the `web` middleware group:** the route is loaded from `routes/webhooks.php` with no session, cookies or CSRF. Pixelforge has no CSRF token, and a session row per webhook would be waste. The request is authenticated by its HMAC signature alone.
 
 ## 15. Retry policy for provider errors

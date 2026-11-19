@@ -101,7 +101,8 @@ final class HandlePixelforgeWebhook
     /**
      * Finds our generation by its Pixelforge id or, when the webhook beat the
      * POST response and the id isn't linked yet, by the local id we sent in
-     * the metadata.
+     * the metadata. A metadata match also requires our environment name, so
+     * another environment's generation #12 can never be mistaken for ours.
      *
      * @param  array<mixed>  $snapshot
      */
@@ -117,6 +118,10 @@ final class HandlePixelforgeWebhook
         $localId = $metadata['pixelflow_generation_id'] ?? null;
 
         if (! is_string($localId) || ! ctype_digit($localId)) {
+            return null;
+        }
+
+        if (($metadata['pixelflow_env'] ?? null) !== config()->string('app.env')) {
             return null;
         }
 
