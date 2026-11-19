@@ -56,7 +56,10 @@ final class PixelforgeWebhookController
         $id = $event['id'] ?? null;
         $type = $event['type'] ?? null;
 
-        if (! is_string($id) || preg_match('/^evt_[A-Za-z0-9]{1,60}$/', $id) !== 1) {
+        // Pixelforge event ids are "evt_" + an opaque token. Be lenient about
+        // the token (rejecting a real event would lose it after the retries)
+        // but make sure it fits the unique event_id column.
+        if (! is_string($id) || preg_match('/^evt_[A-Za-z0-9_-]{1,60}$/', $id) !== 1) {
             return false;
         }
 

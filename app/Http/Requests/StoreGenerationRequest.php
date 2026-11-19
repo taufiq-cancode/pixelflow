@@ -48,7 +48,8 @@ final class StoreGenerationRequest extends FormRequest
 
     /**
      * The form always sends every reference image field, so drop the
-     * empty ones before validating.
+     * empty ones before validating. Laravel's global middleware has already
+     * trimmed them and turned "" into null.
      */
     protected function prepareForValidation(): void
     {
@@ -56,7 +57,7 @@ final class StoreGenerationRequest extends FormRequest
 
         $this->merge([
             'reference_images' => is_array($urls)
-                ? array_values(array_filter($urls, fn ($url) => ! is_string($url) || trim($url) !== ''))
+                ? array_values(array_filter($urls, fn ($url) => $url !== null && $url !== ''))
                 : $urls,
         ]);
     }
