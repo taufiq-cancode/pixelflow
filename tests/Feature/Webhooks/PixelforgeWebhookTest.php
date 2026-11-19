@@ -155,7 +155,7 @@ class PixelforgeWebhookTest extends TestCase
         $this->assertSame(1100, $cost->output_tokens);
         $this->assertSame(1500, $cost->reasoning_tokens);
         // Pixelforge bills on the UTC day the generation completed.
-        $this->assertSame('2026-11-04', $cost->billed_on->toDateString());
+        $this->assertSame('2026-11-04', $cost->billed_on);
     }
 
     public function test_an_event_delivered_twice_is_recorded_once()

@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $user_cost_nano
  * @property int $markup_bps
  * @property bool $user_charged
- * @property CarbonImmutable $billed_on
+ * @property string $billed_on UTC date (Y-m-d) the generation completed: Pixelforge's billing day
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Generation $generation
@@ -54,7 +54,9 @@ class GenerationCost extends Model
             'user_cost_nano' => 'integer',
             'markup_bps' => 'integer',
             'user_charged' => 'boolean',
-            'billed_on' => 'date',
+            // Kept as a plain "Y-m-d" string, not a date cast: a date cast
+            // stores "Y-m-d 00:00:00" on SQLite, which breaks the per-day
+            // grouping and range filters the usage report relies on.
         ];
     }
 
