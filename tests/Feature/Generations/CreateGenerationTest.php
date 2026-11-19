@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Generations;
 
+use App\Actions\PurchaseCredits;
 use App\Enums\GenerationStatus;
 use App\Jobs\SubmitGenerationJob;
 use App\Models\Generation;
@@ -37,6 +38,17 @@ class CreateGenerationTest extends TestCase
     }
 
     /**
+     * A user who has bought $5 of credits.
+     */
+    private function fundedUser(): User
+    {
+        $user = User::factory()->create();
+        app(PurchaseCredits::class)->handle($user, 5);
+
+        return $user;
+    }
+
+    /**
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>
      */
@@ -61,7 +73,7 @@ class CreateGenerationTest extends TestCase
     public function test_a_generation_is_stored_with_its_estimate_and_queued_for_submission()
     {
         $this->fakePricing();
-        $user = User::factory()->create();
+        $user = $this->fundedUser();
 
         $this->actingAs($user)
             ->post(route('generations.store'), $this->validInput())
@@ -84,7 +96,7 @@ class CreateGenerationTest extends TestCase
     {
         $this->fakePricing();
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($this->fundedUser())
             ->post(route('generations.store'), $this->validInput(['reference_images' => ['', 'https://example.com/a.png', '  ']]))
             ->assertSessionHasNoErrors();
 
@@ -115,7 +127,7 @@ class CreateGenerationTest extends TestCase
     {
         $this->fakePricing();
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($this->fundedUser())
             ->post(route('generations.store'), $this->validInput($overrides))
             ->assertSessionHasErrors($field);
 
@@ -127,7 +139,7 @@ class CreateGenerationTest extends TestCase
     {
         $this->fakePricing();
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($this->fundedUser())
             ->post(route('generations.store'), $this->validInput(['prompt' => str_repeat('é', 4000)]))
             ->assertSessionHasNoErrors();
 
@@ -139,7 +151,7 @@ class CreateGenerationTest extends TestCase
         Sleep::fake();
         $this->fakePricing(503);
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($this->fundedUser())
             ->post(route('generations.store'), $this->validInput())
             ->assertSessionHasErrors('pricing');
 
@@ -150,7 +162,7 @@ class CreateGenerationTest extends TestCase
     {
         $this->fakePricing();
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($this->fundedUser())
             ->postJson(route('generations.estimate'), [
                 'prompt' => str_repeat('a', 400),
                 'size' => '1536x1024',
@@ -174,7 +186,7 @@ class CreateGenerationTest extends TestCase
     {
         $this->fakePricing();
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($this->fundedUser())
             ->postJson(route('generations.estimate'), ['prompt' => '', 'size' => '1024x1024', 'quality' => 'low', 'reference_image_count' => 0])
             ->assertOk()
             // 280 output tokens (+ 0..500 reasoning) at the docs' rates, × 1.25.
@@ -185,7 +197,7 @@ class CreateGenerationTest extends TestCase
     {
         $this->fakePricing();
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($this->fundedUser())
             ->postJson(route('generations.estimate'), ['size' => 'huge', 'quality' => 'low', 'reference_image_count' => 9])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['size', 'reference_image_count']);

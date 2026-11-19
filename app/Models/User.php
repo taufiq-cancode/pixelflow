@@ -30,6 +30,16 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
+     * Mirrors the column default, so a freshly created user isn't an admin
+     * even before it is reloaded from the database.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'is_admin' => false,
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -49,5 +59,13 @@ class User extends Authenticatable
     public function generations(): HasMany
     {
         return $this->hasMany(Generation::class);
+    }
+
+    /**
+     * @return HasMany<CreditPurchase, $this>
+     */
+    public function creditPurchases(): HasMany
+    {
+        return $this->hasMany(CreditPurchase::class);
     }
 }

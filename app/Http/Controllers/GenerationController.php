@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\CreateGeneration;
 use App\Enums\GenerationStatus;
+use App\Exceptions\InsufficientCredits;
 use App\Http\Requests\StoreGenerationRequest;
 use App\Http\Resources\GenerationResource;
 use App\Models\User;
@@ -63,11 +64,15 @@ final class GenerationController
 
         try {
             $createGeneration->handle($user, $request->generationInput());
+        } catch (InsufficientCredits $exception) {
+            throw ValidationException::withMessages(['credits' => $exception->getMessage()]);
         } catch (PixelforgeException) {
             throw ValidationException::withMessages([
                 'pricing' => 'Live pricing is temporarily unavailable, so this generation can\'t be priced. Please try again in a moment.',
             ]);
         }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Generation queued. You\'ll see it update here.']);
 
         return to_route('generations.index');
     }

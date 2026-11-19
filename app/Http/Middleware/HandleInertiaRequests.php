@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
+use App\Services\CreditLedger;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -35,12 +37,17 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
             ],
+            // Balance, amount reserved by unfinished generations, and what's
+            // left to spend, as exact decimal strings.
+            'credits' => fn () => $user instanceof User ? app(CreditLedger::class)->summary($user) : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }
