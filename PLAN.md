@@ -94,9 +94,18 @@ Approved on 2026-11-17. Every judgment call and the reasoning behind it is in [D
 - `pixelflow:audit-usage --start --end` prints the same comparison for Step 6.
 - **Balances:** balance = Σ purchases − Σ `user_cost`, and available = balance − Σ `estimated_max` of in-flight generations. CreateGeneration checks affordability under a user-row lock, and the "Buy credits" button adds a $5, $10 or $25 purchase row.
 
-## Key files (to be created)
+## Key files (as built)
 
-`app/Services/Pixelforge/PixelforgeClient.php`, `PixelforgeException.php`, `PricingCatalog.php` (value object built from /v1/pricing, plus cached repository), `app/Services/PricingService.php` (pure), `app/Support/Money.php` (parse/format nano), `app/Enums/GenerationStatus.php`, `app/Actions/{CreateGeneration,ApplyGenerationSnapshot,HandlePixelforgeWebhook}.php`, `app/Services/Pixelforge/WebhookSignature.php`, `app/Jobs/SubmitGenerationJob.php`, `app/Http/Controllers/{GenerationController,EstimateController,PixelforgeWebhookController}.php`, `app/Http/Requests/StoreGenerationRequest.php`, `app/Console/Commands/ReconcileGenerations.php`, `resources/js/pages/generations/{Create,Index}.vue`, `config/pixelforge.php`, `routes/web.php`, `routes/console.php`, `bootstrap/app.php` (CSRF exclusion).
+| Area               | Files                                                                                                                                                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Money and pricing  | `app/Support/Money.php`, `app/Services/Pricing/{PricingService,PricingCatalog,CostEstimate,ActualCost}.php`, `app/Enums/TokenType.php`                                                                                      |
+| Pixelforge         | `app/Services/Pixelforge/{PixelforgeClient,PixelforgeException,PricingCatalogRepository,WebhookSignature}.php`, `config/pixelforge.php`                                                                                     |
+| State and charging | `app/Enums/GenerationStatus.php`, `app/Actions/{CreateGeneration,ApplyGenerationSnapshot,FailUnsubmittedGeneration,HandlePixelforgeWebhook,PurchaseCredits}.php`, `app/Services/CreditLedger.php`                           |
+| Async work         | `app/Jobs/SubmitGenerationJob.php`, `app/Console/Commands/ReconcileGenerations.php`, `routes/console.php`                                                                                                                   |
+| HTTP               | `app/Http/Controllers/{GenerationController,GenerationEstimateController,CreditController,PixelforgeWebhookController,Admin/UsageReportController}.php`, `app/Http/Requests/*`, `routes/{web,webhooks}.php`                 |
+| Reporting          | `app/Services/UsageReport.php`, `app/Console/Commands/{AuditUsage,MakeAdmin}.php`                                                                                                                                           |
+| UI                 | `resources/js/pages/{generations/Create,generations/Index,credits/Index,admin/Usage,Welcome}.vue`, `resources/js/components/{GenerationCard,GenerationStatusBadge,ChoiceCards,NavCredits}.vue`, `resources/js/lib/money.ts` |
+| Data               | `database/migrations/2026_11_*` (generations, generation_costs, webhook_events, credit_purchases, users.is_admin)                                                                                                           |
 
 ## Workflow (report and stop after each step)
 

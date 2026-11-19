@@ -176,11 +176,15 @@ There are four layers, each enough on its own for the case it covers:
     - available = balance − Σ `estimated_max_cost_nano` of the user's queued or processing generations.
     - Generation is blocked when available < the new estimate's max. The check runs inside a transaction holding `lockForUpdate` on the user row, so two simultaneous submits can't both spend the same credit.
 - **Why:** the actual cost is always ≤ the max estimate (§9), so balances can't go negative. There's no separate hold/release ledger: the in-flight estimates _are_ the hold.
+- **New accounts start at $0.** "Buy credits" adds $5, $10 or $25 instantly. It's a fake purchase, and only those packs are accepted. Free signup credit would be a business decision, and the brief asks for an explicit buy action.
+- **Known edge:** if Pixelforge raises its rates in the ≤10 minutes between our cached price list and the submit, the actual cost could exceed the reserved maximum and a balance could dip slightly below zero. The charge is still the true cost. Generations created before balances existed (local test data only) also show as a negative balance.
 
 ## 20. Admin report (stretch)
 
 - **Decision:** a per-day and per-day×user table of generations, credit spend, provider cost and profit, all summed from `generation_costs` by `billed_on`. It is shown side by side with a live `GET /v1/usage` call, with an exact integer match on cost, token counts and generation count.
 - **Why:** it reconciles against Pixelforge's source of truth rather than just restating our own numbers. `pixelflow:audit-usage` prints the same comparison from the CLI.
+- **Access:** only users with `is_admin`, granted with `php artisan pixelflow:make-admin {email}`. There's no admin UI for granting it, so nobody can promote themselves.
+- **Scope:** the report covers this environment's API key only, which is why each environment needs its own key. A day that differs lists every compared field side by side. A generation that finished in the last couple of minutes may not be recorded yet; the reconciler catches it up.
 
 ## 21. No account deletion
 
@@ -191,3 +195,13 @@ There are four layers, each enough on its own for the case it covers:
 
 - **Decision:** the Form Requests validate `size` and `quality` against the keys of `GET /v1/pricing`'s token tables, not against hardcoded lists. If pricing can't be loaded, the request fails with a readable "pricing temporarily unavailable" error instead of guessing.
 - **Why:** a generation we can't price is a generation we shouldn't submit. Using the provider's own table also means a size Pixelforge adds or removes is picked up automatically.
+
+## 23. The live estimate is computed on the server
+
+- **Decision:** the Generate page sends the form to `POST /generations/estimate` after typing pauses for 300 ms, and shows what `PricingService` returns. A newer request cancels an older one.
+- **Why:** there is exactly one implementation of the money maths, in PHP, and it's unit-tested. Duplicating it in TypeScript would invite the two to drift, and JavaScript numbers are floats. Unicode character counting also matches Pixelforge only on the server (`mb_strlen`).
+
+## 24. Live status by polling, only while needed
+
+- **Decision:** the History page reloads just the `generations`, `hasInFlight` and `credits` props every 3 seconds (Inertia `usePoll`). It stops as soon as nothing is queued or processing.
+- **Why:** the brief allows polling, and it needs no websocket infrastructure. The page reads our own database, which webhooks and the reconciler keep up to date, so it never calls Pixelforge itself. Stopping when idle keeps a finished History page from costing anything.

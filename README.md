@@ -7,6 +7,19 @@ Users are charged Pixelforge's exact cost plus a 25% markup, recorded per genera
 - [PLAN.md](PLAN.md): architecture, data model, state machine, pricing formula and webhook flow.
 - [DECISIONS.md](DECISIONS.md): every judgment call (money units, rounding, retries, idempotency) with its reasoning.
 
+## What it does
+
+- **Generate** (`/generate`): prompt, size, quality and up to 4 reference image URLs. A live price range is shown
+  before you submit, with its token breakdown.
+- **History** (`/generations`): live status (queued, processing, succeeded, failed), the estimated range, the actual
+  cost, the image and a readable reason for any failure. Failed generations show $0.
+- **Credits** (`/credits`): balance, the amount reserved by unfinished generations, and a fake "Buy credits" ($5,
+  $10, $25). A generation is refused if its maximum estimate exceeds the available credits.
+- **Usage report** (`/admin/usage`, admins only): credit spend, provider cost and profit per UTC day and per user,
+  reconciled day by day against Pixelforge's `GET /v1/usage`.
+- **Webhooks** (`POST /webhooks/pixelforge`): signature-verified and processed exactly once, whatever the order.
+- **Reconciler** (`pixelflow:reconcile-generations`, every minute): polls generations whose webhook went missing.
+
 ## Requirements
 
 - PHP 8.4 (the lock file needs ≥ 8.4.1) with `pdo_mysql`, `mbstring`, `intl`, `openssl`, `curl`, `fileinfo`, `zip`.
@@ -100,9 +113,44 @@ and `Http::preventStrayRequests()` fails any unfaked request. What is covered:
   arrives later.
 - **Database constraints:** a second cost row, a reused Pixelforge id or a reused idempotency key are rejected by
   the database itself.
+- **Balances:** purchases add exact dollars, the reservation blocks overspending, success charges the actual cost,
+  and failure charges nothing.
+- **Usage report:** per-day and per-user sums, exact reconciliation, flagging a one-nanodollar difference, still
+  working when Pixelforge is down, admin-only access, and the audit command's exit codes.
+- **Pages:** the props sent to Generate and History, including the pricing-unavailable state and expired image
+  links.
 
 ### Live testing against Pixelforge
 
 With the tunnel, queue worker and scheduler running, the prompt keywords force each behaviour: `[succeed]`,
 `[fail]`, `[slow]`, `[duplicate]`, `[blocked]` and `[overloaded]`. Then compare the day's
 `GET /v1/usage?start_date=…&end_date=…` with the sum of `generation_costs` for that `billed_on` date.
+
+## Operations
+
+```bash
+php artisan pixelflow:make-admin you@example.com          # grant access to /admin/usage
+php artisan pixelflow:audit-usage --start=2026-11-01       # reconcile with /v1/usage; exits 1 on any mismatch
+php artisan pixelflow:reconcile-generations                # poll stuck generations now (also scheduled)
+```
+
+## Deploying to Laravel Cloud
+
+1. **Create the app** from this GitHub repository with **PHP 8.4**. Attach a **MySQL** database; Cloud injects the
+   `DB_*` variables.
+2. **Environment variables:** `APP_ENV=production`, `APP_DEBUG=false`, `QUEUE_CONNECTION=database`,
+   `PIXELFORGE_API_KEY`, `PIXELFORGE_WEBHOOK_SECRET` and `PIXELFLOW_MARKUP_BPS=2500`. Use a Pixelforge key that is
+   **only** used by this deployment, so its `/v1/usage` matches the app's records exactly.
+3. **Build commands:** the defaults (`composer install --no-dev`, `npm ci && npm run build`). **Deploy command:**
+   `php artisan migrate --force`.
+4. **Background processes:** enable the **scheduler**, and add a **queue worker** (`php artisan queue:work`). Without
+   the worker, generations stay "waiting for a free slot". Without the scheduler, lost webhooks are never recovered.
+5. **Webhook:** in the Pixelforge dashboard, set the production key's endpoint URL to
+   `https://<your-app>.laravel.cloud/webhooks/pixelforge` and press **Send test event**. The delivery log should show
+   `HTTP 200`.
+6. **Admin:** register in the app, then run `php artisan pixelflow:make-admin <your email>` from Cloud's command
+   runner.
+7. **Verify:** generate an image, watch it finish in History, then open `/admin/usage` (or run
+   `php artisan pixelflow:audit-usage`) and check that every day matches Pixelforge exactly.
+
+Pushing to the connected branch redeploys.
