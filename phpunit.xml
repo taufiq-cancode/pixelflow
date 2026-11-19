@@ -32,5 +32,11 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Never let tests reach the real Pixelforge or use real secrets. -->
+        <env name="PIXELFORGE_BASE_URL" value="https://pixelforge.test/v1" force="true"/>
+        <env name="PIXELFORGE_API_KEY" value="pf_test_key" force="true"/>
+        <env name="PIXELFORGE_WEBHOOK_SECRET" value="whsec_test_secret" force="true"/>
+        <env name="PIXELFORGE_SIGNATURE_TOLERANCE" value="300" force="true"/>
+        <env name="PIXELFLOW_MARKUP_BPS" value="2500" force="true"/>
     </php>
 </phpunit>
